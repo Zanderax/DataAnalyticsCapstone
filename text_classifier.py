@@ -1,21 +1,20 @@
-import tensorflow as tf
-import tensorflow_hub as hub
-# import matplotlib.pyplot as plt
+import argparse
+import csv
 import numpy as np
 import os
 import pandas as pd
 import re
 import shutil
+import tensorflow as tf
+import tensorflow_hub as hub
 
-# import seaborn as sns
-
-import argparse
-
-import csv
 tempDir = os.environ['TMPDIR']
 
 validScores = ["sNEU", "sAGR", "sCON", "sOPN", "sEXT" ]
-validModules = ["https://tfhub.dev/google/nnlm-en-dim128/1"]
+validModules = {
+    "nnlm-en-dim128":"https://tfhub.dev/google/nnlm-en-dim128/1",
+    "random-nnlm-en-dim128":"https://tfhub.dev/google/random-nnlm-en-dim128/1",
+}
 
 # Load all files from a directory in a DataFrame.
 def load_facebook_data( score ):
@@ -37,7 +36,7 @@ def load_facebook_data( score ):
     return pd.DataFrame.from_dict(train), pd.DataFrame.from_dict(test), test
 
 
-def RunModel( score, module ):
+def RunModel( score, module, train_module=False ):
     # We only care about errors
     tf.logging.set_verbosity(tf.logging.ERROR)
     
@@ -45,7 +44,7 @@ def RunModel( score, module ):
     train_df, test_df, test = load_facebook_data(score)
     train_df.head()
     
-    #
+    # Train model
     train_input_fn = tf.estimator.inputs.pandas_input_fn(
     train_df, train_df[score], num_epochs=None, shuffle=True)
     predict_train_input_fn = tf.estimator.inputs.pandas_input_fn(
@@ -56,7 +55,8 @@ def RunModel( score, module ):
     # Set up our feature columns from the model
     embedded_text_feature_column = hub.text_embedding_column(
         key="status", 
-        module_spec=module,)
+        module_spec=module,
+        trainable=train_module,)
         
     # Set up our neural network 
     estimator = tf.estimator.DNNClassifier(
@@ -76,9 +76,12 @@ def RunModel( score, module ):
     train_accuracy = train_eval_result["accuracy"] * 100.
     test_accuracy = test_eval_result["accuracy"] * 100.
     
-    
     # Print results
-    print "Results for " + score
+    print "Results"
+    print "================"
+    print "Model: " + module
+    print "Score: " + score
+    print "Train Module: " + str(train_module)
     print "================"
     print "Training set accuracy: {0:.2f}%".format(train_accuracy)
     print "Test set accuracy: {0:.2f}%".format(test_accuracy)
@@ -87,7 +90,9 @@ def RunModel( score, module ):
 def ParseArgs():
     parser = argparse.ArgumentParser(description='Model Arguments')
     parser.add_argument('--scores', help='The score to use', choices=validScores, default=validScores[0], nargs='*')
-    parser.add_argument('--module', help='The module to use', choices=validModules, default=validModules[0])
+    parser.add_argument('--module', help='The module to use', choices=validModules.keys(), default=validModules.keys()[0])
+    parser.add_argument('--train', dest='train', action='store_true')
+    parser.set_defaults(train=False)
     return parser.parse_args()
     
 def ClearTmpDir():
@@ -99,9 +104,10 @@ def main():
     args = ParseArgs()
     scores = args.scores
     module = args.module
+    train = args.train
     ClearTmpDir()
     for score in scores:
-        RunModel( score, module )
+        RunModel( score, validModules[module], train )
         ClearTmpDir()
        
     
