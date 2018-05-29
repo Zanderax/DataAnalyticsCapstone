@@ -17,6 +17,8 @@ validScores = ["sNEU", "sAGR", "sCON", "sOPN", "sEXT" ]
 validModules = {
     "nnlm-en-dim128":"https://tfhub.dev/google/nnlm-en-dim128/1",
     "random-nnlm-en-dim128":"https://tfhub.dev/google/random-nnlm-en-dim128/1",
+    "USE":"https://tfhub.dev/google/universal-sentence-encoder/1",
+    "WIKI":"https://tfhub.dev/google/Wiki-words-500-with-normalization/1",
 }
 
 # Load all files from a directory in a DataFrame.
