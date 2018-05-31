@@ -147,16 +147,32 @@ def RunRegressionModel( score, module, train_module=False ):
         
     labelsTensor = tf.convert_to_tensor(labels)
     
-    
     rmse, rmse_op  = tf.metrics.root_mean_squared_error(labelsTensor,predictionsTensor)
     
     sess = tf.InteractiveSession()
     tf.global_variables_initializer().run()
     tf.local_variables_initializer().run()
-    # print(sess.run([rmse, rmse_op]))
-    # print(sess.run([rmse]))
 
-
+    #Predict if Status
+    if(status):
+        statuses = []
+        with open('facebook_clean.csv') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                statuses.append(row["STATUS"])
+        predict_status_input_fn = tf.estimator.inputs.pandas_input_fn(
+                test_df, shuffle=False)
+    
+      
+        predictor = estimator.predict(input_fn=predict_status_input_fn)
+        print predictor
+        
+        f = open('status_result', 'w+')
+        f.write(predictor)
+        f.close
+        #     for s in score
+        #         f.write('{s},'.format(s=s))
+        # f.write('/n')
     
     # Print results
     print "Results"
@@ -178,8 +194,10 @@ def ParseArgs():
     parser.add_argument('--module', help='The module to use', choices=validModules.keys(), default=validModules.keys()[0])
     parser.add_argument('--train', dest='train', action='store_true')
     parser.add_argument('--regression', dest='regression', action='store_true')
+    parser.add_argument('--status', dest='status', action='store_true')
     parser.set_defaults(train=False)
     parser.set_defaults(regression=False)
+    parser.set_defaults(status=False)
     return parser.parse_args()
     
 def ClearTmpDir():
